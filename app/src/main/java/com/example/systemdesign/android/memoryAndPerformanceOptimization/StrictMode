@@ -1,0 +1,30 @@
+🔥StrictMode
+
+Strict mode is developer tool which help to detect accidental app performance like
+thread violation and resource leak, it is used in debug app in application class
+
+🔸it help to detect:
+1- use network call in main thread
+2- read/write and database operation in main thread
+2- resource leak [like resource is not released]
+
+
+🔹code Example :
+
+if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(
+                StrictMode.ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()
+                    .penaltyLog()
+                    .build()
+            )
+
+            StrictMode.setVmPolicy(
+                StrictMode.VmPolicy.Builder()
+                    .detectLeakedClosableObjects()
+                    .penaltyLog()
+                    .build()
+            )
+        }

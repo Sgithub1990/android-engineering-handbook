@@ -1,0 +1,195 @@
+🔥Image Loader 🔥
+
+
+
+🔥Level 1 ->
+1. Download image from URL
+2. Return cached image if available
+3. Store image in Memory Cache (RAM)
+4. Store image in Disk Cache (Internal Storage)
+
+🔸Flow :
+ImageLoader ---> ImageLoaderClient ----> checkMemoryCache ---> checkDiskCache ---------> DownloadFromApi
+                                               ↓                  ↓                                ↓
+                                              Yes                Yes                           Save in Disk
+                                               ↓                  ↓                                ↓
+                                            bitmap         Save in MemoryCache               Save in MemoryCache
+                                                                  ↓                                ↓
+                                                               bitmap                           bitmap
+
+
+ 🔥HLD Level 1:
+
+ImageLoader
+    ↓
+ImageLoaderClient
+    ↓
+Check Memory Cache
+    │
+    ├── HIT → Bitmap → return
+    │
+    └── MISS
+          ↓
+      Check Disk Cache
+          │
+          ├── HIT → File
+          │          ↓
+          │      Decode Bitmap
+          │          ↓
+          │      Save Memory Cache
+          │          ↓
+          │        return
+          │
+          └── MISS
+                ↓
+           Download from API
+                ↓
+           Save Disk Cache
+                ↓
+           Decode Bitmap
+                ↓
+           Save Memory Cache
+                ↓
+              return
+
+..................................................................................................................
+
+ 🔥Level 2 ->
+ 1-Request deduplication
+ 2-Cancelation
+ 3-concurrency
+ 3-Lifecycle aware
+ 4-OOM
+
+val inFlightMap : Map<Url,Deferred<Bitmap>>
+val caller =0
+                                                           caller=1
+RequestManager -> mutex ->check inFlightMap -> if request null ----------> new request -> add in flightMode
+                             ↓
+                       If request not null
+                             ↓ caller++
+                          return
+
+
+
+🔸Cancelation:
+🔹Suppose the same image is requested by 3 callers:
+Caller A ──┐
+Caller B ──┼──→ profile.jpg → ONE shared download
+Caller C ──┘
+Scenario 1: A cancels
+A ❌
+B ✅
+C ✅
+🔹We decrement:
+callers = 2  Do NOT cancel the download, because B and C still need the image.
+🔹flow:
+request -> completed/cancel -> caller --   -> check if caller = 0 -->  request.deferred.cancel()
+
+
+🔸Deduplication
+Problem: Multiple callers request the same URL.
+🔹Without deduplication:
+A → Network ──→ profile.jpg
+B → Network ──→ profile.jpg
+C → Network ──→ profile.jpg
+📌Goal: Stop unnecessary work. so use inFlightRequest
+
+
+🔥HLD Request Manager:
+
+RequestManager
+      ↓
+    Mutex
+      ↓
+  inFlightMap
+      ↓
+Does URL exist?
+   ↙          ↘
+ YES           NO
+  ↓             ↓
+reuse        create Deferred
+Deferred         ↓
+  ↓          add to map
+  ↓             ↓
+  └─────────────┘
+        ↓
+     Bitmap
+
+🔸lifeCycle Aware
+use viewmodelScope
+
+
+
+🔸OOM
+URL
+ ↓
+Memory Cache
+ ↓ MISS
+Disk Cache
+ ↓
+File
+ ↓
+Read image dimensions
+ ↓
+Calculate required size
+ ↓
+Downsample
+ ↓
+Decode Bitmap
+ ↓
+Memory Cache
+ ↓
+Return Bitmap
+
+
+🔸inJustDecodeBounds?  = true
+means without creating bitmap we can get sample size
+
+.....................................................................................................
+
+🔥Full HLD:
+
+
+
+                         UI
+                          │
+                          ↓
+                     ViewModel
+                          │
+                          ↓
+                    ImageLoader
+                          │
+                          ↓
+                   RequestManager
+                          │
+              ┌───────────┼───────────┐
+              ↓           ↓           ↓
+            mutex   InFlightMap  Cancellation
+              │           │
+              │           ↓
+              │       Deduplication
+              │           │
+              └───────────┼───────────┘
+                          ↓
+                     Repository
+                          │
+             ┌────────────┼────────────┐
+             ↓            ↓            ↓
+         DiskCache      Network     Decoder
+             │            │            │
+             ↓            ↓            ↓
+           File          Bytes       Bitmap
+                          │
+                          ↓
+                     Downsampling
+                          │
+                          ↓
+                     MemoryCache
+                          │
+                          ↓
+                   Shared Deferred
+                          │
+                  ┌───────┼───────┐
+                  ↓       ↓       ↓
+                  A       B       C

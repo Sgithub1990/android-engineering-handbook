@@ -1,0 +1,7 @@
+🔥Summary:
+
+Tool	                       Main purpose
+StrictMode	                   Detect common violations
+Perfetto	                   Analyze detailed system and thread timelines
+MacroBenchmark	               Measure end-to-end app performance
+Android Studio Profiler	       Investigate CPU, memory, and related resource usage

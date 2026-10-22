@@ -1,0 +1,143 @@
+🟢Instagram Feed
+
+🔥HLD:
+UI -> ViewModel -> Repository -> RemoteMediator -> Room + API
+
+🔥LLD:
+🔸Repository(remoteMediator):
+ Pager -> Flow<PagingData<User>>
+
+🔸RemoteMediator(Room,API):
+🔹Room contain Data:
+Room → PagingSource → Flow<PagingData<User>> → UI
+📌Remote mediator can still call api to refresh data
+
+🔹Room does not contain Data:
+RemoteMediator → API → Room → PagingSource → Flow<PagingData<User>> → UI
+
+🔸ViewModel(repository)
+Repository → Flow<PagingData<User>> → cachedIn(viewModelScope)
+
+🔸UI
+collectAsLazyPagingItems() → LazyColumn
+
+
+🔥Data Flow :
+ API → RemoteMediator → Room → PagingSource → PagerFlow → ViewModel → UI
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+🟢Detailed Analysis
+
+🔥RemoteMediator:
+RemoteMediator fetch data from API and update Room
+
+🔹Method:
+
+fun load(
+loadTYpe : LoadType
+state: PagingState<Int, User>
+)
+
+🔹LoadType:
+1-REFRESH -> Load initial or refresh data
+2-APPEND -> Load next Page data when user scroll
+3-PREPEND -> Load previous page data when user scroll
+
+🔹PagingState:
+Give Information about current loaded page data
+1- state.anchorPosition
+2- state.config
+3- state.pages
+
+
+🔸RemoteKey:
+Remote key contain information about prev and next page
+
+@Entity(tableName = "remote_keys")
+data class RemoteKeys(
+    @PrimaryKey
+    val id: Int,
+    val prevKey: Int?,
+    val nextKey: Int?
+)
+
+🔸Dao:
+
+@Dao
+interface UserDao {
+
+    @Query("SELECT * FROM users ORDER BY id")
+    fun pagingSource(): PagingSource<Int, UserEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(users: List<UserEntity>)
+}
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+🟢Production concerns
+
+🔸Api fail during append
+-> cache data remain visible and handle with retry
+lazyPagingItems.retry() is used to retry a failed paging request without refreshing the entire list.
+
+🔸Same page is returned twice [duplicate page data]
+🔹Use:
+@Insert(onConflict = OnConflictStrategy.REPLACE)
+📌@PrimaryKey identifies a unique record; @Upsert inserts new records or updates existing ones.
+
+🔸Refresh occurs while append is pending:
+Paging3 handle this . because it gives REFRESH priority high so if refresh call it cancel append
+🔹Use:
+Room withTransaction	All-or-nothing database changes
+Primary key + @Upsert	Prevent duplicate rows for the same ID
+
+🔸Process dies after the API succeeds:
+If the process dies after the API succeeds, the main risk is that the server has completed the operation, but the app hasn't saved that success locally.
+🔹Use:
+Idempotency key[Prevent duplicate server-side execution.]
+📌resends the request with the same idempotency key if the backend guarantees safe deduplication.
+🔹Flow:
+Room: Persist the operation and its status across process death.
+WorkManager: Retry eligible work after the app process dies.
+Idempotency key: Prevent duplicate server-side execution.
+
+🔸API returns malformed or repeated cursors
+I compare the requested cursor with the returned cursor. If it repeats, I stop pagination to prevent an infinite API request loop.
+🔹Flow:
+1-Request a page.
+2-Check the next cursor.
+3-If the cursor repeats, stop pagination by
+return MediatorResult.Success(
+        endOfPaginationReached = true
+    )
+and report log to further in backend investigation
+
+
+🔸What happens for different failures?
+Error	                      What to do
+No internet / timeout	      Show error; allow retry
+HTTP 500	                  Retry later with backoff
+HTTP 401	                  Refresh authentication if appropriate
+HTTP 400	                  Usually don't retry the same request unchanged
+Invalid or repeated cursor	  Stop the pagination loop and report the issue
+
+🔸What happens if repeated failure
+limit retry count and make it fail..
+
+
+🔸Concurrency in Pagging 3
+Multiple paging operations are happening  at same time
+🔹Handle:
+1-Room Transaction — all operations succeed together
+📌Suppose REFRESH fetches new users. You need to delete old users and insert new ones.
+2-Atomic Update — One change happens safely
+📌Suppose two operations update the same fund balance at nearly the same time.
+3-Unique Key & @Upsert — prevent duplicate rows
+📌Suppose the API returns page 2 twice. Both responses contain user ID 101.
+
+🔸Imp:
+Concept	                   Problem it solves
+Transaction	               Partial database updates
+Atomic update	           Lost updates from concurrent read-modify-write operations
+Unique key + @Upsert	   Duplicate rows for the same entity

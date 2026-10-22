@@ -1,0 +1,35 @@
+
+Requirement  -> design image download api like Glide, Coil
+
+ Glide ->
+ Glide.load(
+ url = "imageUrl"
+ imageView = "ImageView"
+ palaceHolder = "placeHolder")
+
+
+
+Approach ->
+
+Level 1 ->
+1. Download image from URL
+2. Return cached image if available
+3. Store image in Memory Cache (RAM)
+4. Store image in Disk Cache (Internal Storage)
+
+
+Level 2 ->
+5. Deduplicate concurrent requests for the same URL
+6. Support cancellation
+7. Control memory usage and prevent OOM
+8. Be lifecycle-aware
+
+
+
+Imp:
+Memory Cache → Bitmap
+Disk Cache → Image bytes/file
+
+
+
+

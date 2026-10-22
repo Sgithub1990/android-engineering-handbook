@@ -1,0 +1,105 @@
+🔥MemoryLeak :
+App keep reference of object that is no longer use [GC can not free their memory]
+
+🔸MemoryLeakReason:
+1- Holding Activity instance in singleton
+2- Use Static variable
+3- Using thread
+
+Thread th = new Thread{
+th.sleep(50000)
+@runOnUiThread{
+some ui component update
+}
+}
+when user back press before thread is completed then it hold activity context cause temp memory leak
+
+4-Using Handler
+
+val handler = Handler(Runnable{
+@run{
+ some ui component update
+}
+},5000)
+when user back press before 5000 then it hold activity context cause temp memory leak
+
+5-Listener or callback not unregistered
+
+6-Coroutine not cancelled
+Using GlobalScope inside activity ,because GlobalScope lives independently of the Activity, the coroutine continues even after the Activity is gone.
+Activity cannot be garbage collected until the coroutine completes.
+
+🔸HowToResolve:
+1- avoid using static variable
+2- handle coroutine life cycle properly
+3- clean up resource and callback
+4- use leakCanary
+5- memoryProfiler
+
+🔸remember: P→C→C→D
+Prevent — avoid unintended long-lived references.
+Cancel — manage coroutine and lifecycle scope correctly.
+Clean — unregister callbacks, listeners, and observers; clear bindings.
+Detect — use LeakCanary, Android Studio Memory Profiler, and heap analysis.
+
+🔥LeakCanary:Watch → Detect → Analyze → Report.
+Leak canary is openSource automatic memory leak detection tool. which detect object that remain in memory than expected and analyse
+heap dump and generate leak trace report..
+
+
+         Activity.onDestroy()
+                     │
+                     ▼
+          ObjectWatcher.watch()
+                     │
+                     ▼
+            Wait a few seconds
+                     │
+                     ▼
+          Trigger Garbage Collection [GC]
+                     │
+         ┌───────────┴───────────┐
+         │                       │
+   Object collected        Object still alive
+         │                       │
+         ▼                       ▼
+      No leak              Heap Dump (.hprof)
+                                    │
+                                    ▼
+                             analyzes heap
+                                    │
+                                    ▼
+                           Find GC Root Path
+                                    │
+                                    ▼
+                           Generate Leak Trace
+                                    │
+                                    ▼
+                              Show Report
+
+
+🔥Memory profiler: androidStudio-> profiler -> memory
+Memory profiler is android studio tool help to detect memory usage in your app.
+1-It detect memory leak by analyse memory usage in heap dump ..
+2-It provide Retention size [total memory which will be free when object is garbage collected]
+3-It provide swallow size [memory occupied by object it self]
+
+
+🔥OOM
+When App try yo allocate memory more than app available memory
+
+🔸Reason for OOM
+1-Large bitmap size
+2-memory leak
+3-Excessive memory caching
+
+🔸How to avoid
+1-leak canary
+2-memory profiler to analyze heap size
+3-DownSampling large Image bitmap
+4-Limit cache size
+
+
+
+
+

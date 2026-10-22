@@ -1,0 +1,20 @@
+package com.example.systemdesign.design.downloadManager.data.remote
+
+import okhttp3.ResponseBody
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Url
+
+
+interface DownloadApi {
+
+    /*https://speedtest.ftp.otenet.gr/files/test100Mb.db*/
+
+    @GET
+    suspend fun downLoadFile(
+        @Url url: String,
+        @Header("Range") range: String?
+    ): Response<ResponseBody>
+
+}

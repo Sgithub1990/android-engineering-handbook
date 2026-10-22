@@ -1,0 +1,44 @@
+🔥MacroBenchMark
+
+MacroBenchMark is android jetpack library which is used to measure performance of entire app as userPerspective
+like startupTime , scrolling smoothness , navigation and ui performance
+
+
+macroBenchMark measure
+1- startupTimeMatrix
+2- frameTimeMatrix
+
+
+🔹Code Syntax :
+
+@RunWith(AndroidJUnit4::class)
+@LargeTest
+class LoginBenchmark {
+
+    @get:Rule
+    val benchmarkRule = MacroBenchmarkRule()
+
+@Test
+loginFlow() = benchmarkRule.measureRepeated(
+package = com.example.demo,
+ matrix = listOf(FrameMatrix())
+startupMode = StartupMode.COLD
+iteration = 5,
+){
+
+startActivityAndWait()
+device.findObject(By.res("username"))
+        .text = "admin"
+
+    device.findObject(By.res("password"))
+        .text = "123456"
+
+    device.findObject(By.text("Login"))
+        .click()
+device.waitForIdeal()
+}
+
+}
+
+
+

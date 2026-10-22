@@ -1,0 +1,373 @@
+🔥BuildProcess:
+converting java/kotlin code in bytecode and package into apk
+
+🔹process:
+Java/kotlin -> compiler -> .class -> D8/R8 -> .dex -> Apk
+
+🔸D8
+convert .class file to .dex file
+
+🔸R8
+It is responsible for shrinking , obfuscates ,and optimized code
+
+Shrinking -> remove unused code
+Obfuscates -> convert long variable or method name into small meaning less name
+Optimized -> Improve code ,remove redundant , and inline
+
+🔸DEX
+it stand for Dalvik Executable which is used by android to run application code on device
+Kotlin/Java does not use in apk it first convert in .dex file then packaged into apk then ART execute them..
+
+🔹Apk contain
+1-Manifest  file
+2-Native lib
+2-.Dex[Class, method,reference]
+3-Resource
+
+🔥JIT :
+JIT (Just-In-Time) Compilation is a runtime optimization technique where code is compiled into
+native machine code while the application is running, instead of before execution.
+
+  Kotlin/Java
+        │
+        ▼
+    .class
+        │
+        ▼
+    DEX (.dex)
+        │
+        ▼
+   Installed
+        │
+        ▼
+Android Runtime (ART) (observe most  frequent method)
+        │
+        ▼
+JIT compiles frequently executed methods into native code
+        │
+        ▼
+CPU executes native machine code
+
+
+🔥What is AOT (Ahead-Of-Time) Compilation?
+AOT (Ahead-Of-Time) Compilation is a compilation technique where bytecode is compiled into native machine code before the application runs, instead of during execution.
+In Android, AOT is performed by the Android Runtime (ART) during app installation or while the device is idle
+
+
+
+🔥Android Internal architecture
+🔸Application Layer
+This is top layer where user interact with application
+🔹Example:
+WhatsApp, Insta-Gram,Facebook
+
+🔸Application FrameWork layer
+This Layer provide Api and service which is directly used by Application
+🔹Example:
+1-AMS - Activity Manager
+2-PMS - Package Manager
+3-WMS - Window Manager
+4-LMS - Location Manager
+
+
+🔸ART/Native Lib
+It Contains ART and Native library  which is used by Application FrameWork
+🔹Example:
+1-ART
+2-Garbage Collector
+3-OpenGl
+4-SQLite
+
+🔸HardWare Abstraction Layer
+It act as bridge between Application and device hardware
+🔹Example:
+1-Camera
+2-BlueTooth
+3-Wifi
+4-GPS
+5-Sensor
+🔹without HAL:
+Imagine different phone manufacturers like Samsung camera,Xiaomi camera,OnePlus camera
+Each camera has different hardware and drivers.
+Without HAL Android framework need different code for every manufacturer
+🔹with HAL
+It communicate with different hardware and  provide common interface for android
+
+🔸Linux
+It is lowest layer which communicate between android system and device hardware
+🔹It is responsible for
+1- Process management
+2- Memory management
+3- Security management
+4- Device driver
+5- File management
+6- PowerManagement
+
+🔥ANR [Application not responding]
+It Occur when main thread is blocked for more than 5 sec
+
+🔸Why ANR
+Network/File or long running task in main thread
+
+🔸Avoid
+1-Never perform network/ file or database operation in main Thread
+2-use coroutine,workManager or flow
+
+
+🔥Pending Intent :
+Pending intent is permission token that allow android system or other component to execute intent latter  on his behalf
+PendingIntent does not guarantee your app process stays alive. Android can recreate the process when executing the action.
+
+🔹syntax:
+val pendingIntent(
+context ,
+0,
+intent,
+Flag.Immutable)
+
+🔹It is used in:AppNotification, AlarmManager
+
+A normal Intent describes an action, but you typically execute it yourself using APIs such as startActivity().
+
+🔥Zygote:
+Zygote is first java process in android  after boot .. It contain common Android classes and resource
+and initialize ART
+
+🔹Important underStanding:
+Boot
+   │
+   ▼
+Zygote starts
+   │
+   ├── Loads Android Framework Classes
+   ├── Loads Core Java Classes
+   ├── Initializes ART -------------------->Imp
+   ├── Loads Fonts
+   ├── Loads Resources
+   │
+   ▼
+Waits for app launch...
+
+🔹When WhatsApp app launches:
+
+Zygote
+   │
+fork() --------> used for child process in linux [Because Linux Copy-On-Write shares memory.]
+   │
+   ▼
+WhatsApp Process
+ => This make app launch very fast
+
+
+🔹Without Zygote: let we have 100 App
+App 1 → initialize ART + load classes + start app
+App 2 → initialize ART + load classes + start app
+
+
+🔥Desugaring
+It convert java/Kotlin to bytecode that older device can underStand
+
+🔹Flow:
+
+Kotlin
+  ↓
+Kotlin Compiler
+  ↓
+.class bytecode
+  ↓
+Desugaring
+  ↓
+ D8
+  ↓
+.dex
+
+🔥App installation process:
+
+   Apk
+    ↓
+Package installer
+     │
+ Verify APK and Signature
+     │
+install APK
+     │
+ ART and App Optimization
+
+
+🔥What is Sandbox in Android?
+Android Sandbox is a security mechanism that isolates each application from other applications by assigning it a unique Linux UID
+and restricting access to its private data and resources.
+
+
+🔥What happens when you launch an Android app?
+
+Tap App Icon
+    ↓
+Launcher
+     │
+ActivityManagerService/Android System
+     │
+Requests Zygote
+     │
+ Fork()
+     │
+Process Created
+     │
+Application.onCreate()
+     │
+Activity Created
+     │
+MainActivity Opens
+
+
+🔥Android Boot Flow:
+Power ON
+    ↓
+Boot ROM [initiate initial boot process]
+     │
+Linux kernal  [init memory , process and drivers]
+     │
+ Zygote [Preloads classes and resources; prepares app processes]
+     │
+System Server [Starts core Android framework services]
+     │
+Launcher / Home Screen
+
+🔥Android App process contain
+1-ART
+2-HEAP
+3-GC
+4-Main Thread
+5-App code
+
+🔥Binder:
+binder is used for interprocess communication
+since one process can not  directly call method of object in  other process
+it allow once process communicate with other process effectively
+
+🔹example:
+startActivity()
+
+Your Activity
+     ↓
+Activity.startActivity()
+     ↓
+  Binder
+     ↓
+System Server
+     ↓
+ActivityTaskManagerService
+
+
+🔥What is Copy-On-Write?[Cow]
+Copy-On-Write is memory optimization technique , app process Don't copy the data immediately
+It share the data from zygote until it does not not modified
+
+🔹Before modification:
+
+Zygote ───────┐
+              ├── Shared Page
+App ──────────┘
+
+
+🔹After App modifies it:
+
+Zygote ───────► Original Page
+
+App ──────────► New Copy
+
+🔥What is ActivityThread?
+Main thread for evey app
+1- create Application
+2- create activity adn view
+
+🔥ActivityManagerService (AMS)
+it is system service used for
+1- memory management
+2-life cycle management
+3-start activity
+4- start service
+
+🔥What are Build Variants in Android?
+different version of build with same code base
+🔹Formula:
+Build Variant = Product Flavor + Build Type
+Example: debugDev
+
+🔥What is App Signing in Android?
+process to digitally signing apk before production for authenticity
+
+🔥What is Doze Mode?
+It is battery saving technique introduce in android 6 marshmello
+when device is ideal then android put it into doze mode to save battery consumption
+1- when Screen is OFF
+2- User has not interact with device
+
+🔥What is ProGuard?
+ProGuard is a tool used in Android to shrink, optimize, and obfuscate your application before release.
+🔹Result:
+1-Smaller APK
+2-Faster download
+3-Less memory usage
+
+🔥What is ADB [Android Debug Bridge]
+it is command line tool used to interact with android device
+🔹It is used for:
+install apps, debug crashes, view logs, inspect devices
+🔹Commands:
+db devices	                      List connected devices
+adb install                       app.apk	Install an APK
+adb logcat	                      View Android system and application logs
+adb reboot	                      Reboot the device
+adb uninstall com.example.app	  Uninstall an application
+
+🔥What is the Looper, Handler, and MessageQueue?
+Looper ->
+A Thread can have at most one Looper associated with it.
+A Looper continuously checks a thread's MessageQueue and processes messages one by one until the Looper quits or the process/thread terminates.
+For example, Android's main thread uses a Looper to process UI events, callbacks, and posted tasks.
+
+MessageQueue->
+The Looper owns a MessageQueue
+
+Handler->
+posts work to a thread's MessageQueue.
+
+🔹flow:
+
+Button Click
+      │
+      ▼
+Handler.post()
+      │
+      ▼
+Creates a Message
+      │
+      ▼
+MessageQueue
+      │
+      ▼
+Looper picks the message
+      │
+      ▼
+Runs Runnable
+      │
+      ▼
+textView.setText("Clicked")
+
+🔥What is a Process in Android?
+When app launch linux kernal create process in which android App is running.
+
+1- Each process has its own virtual address and memory
+2- it contain multiple thread
+3-android system can kil process to reclaim memory
+
+Application Process:
+├── Application
+├── Activity
+├── Service
+├── BroadcastReceiver
+├── ContentProvider
+
+🔥GC — Garbage Collection in Android
+GC (Garbage Collection) is the process of automatically finding and removing objects that are no longer reachable in memory.

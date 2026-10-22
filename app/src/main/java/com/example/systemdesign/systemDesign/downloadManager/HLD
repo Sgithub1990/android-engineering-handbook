@@ -1,0 +1,129 @@
+🟢Technical Depth & use Case
+
+🔥HLD:
+UI → ViewModel -→ DownloadUseCase -→ Repository -→ workManager -→ DownloadClient
+
+🔥Flow:
+Worker -→ Room -→ Repository -→ UseCase -→ ViewModel -→ UI
+
+🔥Responsibility:
+
+1. DownLoadClient : HTTP requests, Range headers, streaming bytes, and file I/O and report progress
+
+2. WorkManage     : Execute background work, coordinate retries, and update final status in Room.
+
+3. Repository     :  Enqueue WorkManager jobs and expose Room data as Flow.
+
+4. UseCase        : Apply business rules for starting, pausing, resuming, or cancelling downloads.
+
+5. ViewModel      : Collect download data from the UseCase and expose UI state.
+
+6. UI             : Display progress, file size, status, and Pause/Resume/Cancel buttons.
+
+
+🔥Depth Technical UnderStanding and Handling:
+
+🔸Concurrency ->
+
+🔹For DataBase:
+ 1. Two or more request update the same balance          -> Sql Atomic Update
+ 2. Update multiple related tables                       -> Transaction
+
+🔹For Application:
+ 1. when two coroutine modify same data                  ->Mutex
+
+
+🔸Failure case	                             Recommended handling	                      Why?
+
+1. Internet off	                               WorkManager network constraint	          Wait until the network is available.
+2. I/O error or temporary network error	       Result.retry()	                          Retry the operation later with backoff.
+3. HTTP 500–599	Usually                        Result.retry()	                          Server errors may be temporary.
+4. HTTP 401	                                   Authenticator or token-refresh flow	      Refresh the expired access token and retry the original request safely.
+5. HTTP 400–499                                Usually Result.failure()	                  Most client errors need correction, not automatic retry
+
+
+🔸Offline write
+Save locally, mark PENDING_SYNC,sync when network constraints are met.
+
+
+🔸Conflict Strategy [server win , local win , version,TimeStamp]
+
+Scenario	                                   Strategy	                           Handling
+
+1. Local and server data inconsistency	      Server wins	                         Update Room with authoritative server data.
+2. Offline write	                          Local wins temporarily	             Save locally, mark PENDING_SYNC,sync when network constraints are met.
+3. Concurrent edits from multiple devices	  Version-based conflict resolution	     Compare server versions and detect stale updates.
+
+
+🔸prevents duplicate server-side operations:
+1- response success but room update fail or App crash      -> use idempotent key [so backend will ensure data is update for thids key so do not update it again and it returns the
+                                                             previously stored result instead.]
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+🟢 Important Component & Data
+
+🔸DownLoadEntity
+downloadId
+Url
+filename
+filePath
+progress
+downloadedBytes
+totalBytes
+
+🔹UI -> ViewModel
+🔹ViewModel -> UseCase
+🔸UseCase:
+1-StartDownLoadUseCase
+2-PauseDownLoadUseCase
+3-ResumDownloadUseCase
+4-CancelDownLoadUseCase
+🔹UseCase -> Repository
+🔹Repository -> workManager
+🔹workManager -> DownLoadWorker
+🔹DownloadWorker -> DownloadClient,RoomDb
+🔹DownloadClient -> Api
+
+
+                    ┌──────────────┐
+                    │      UI      │
+                    └──────┬───────┘
+                           ↓
+                    ┌──────────────┐
+                    │  ViewModel   │
+                    └──────┬───────┘
+                           ↓
+                    ┌──────────────┐
+                    │   UseCase    │
+                    └──────┬───────┘
+                           ↓
+                ┌─────────────────────┐
+                │ DownloadRepository  │
+                └──────────┬──────────┘
+                           ↓
+                    ┌──────────────┐
+                    │ WorkManager  │
+                    └──────┬───────┘
+                           ↓
+                    ┌──────────────┐
+                    │DownloadWorker│
+                    └──────┬───────┘
+                       ↙   |    ↘
+                   RoomDB     DownloadClient
+                                  ↓
+                                 API
+
+
+
+
+
+
+
+
+
+
+
+
+

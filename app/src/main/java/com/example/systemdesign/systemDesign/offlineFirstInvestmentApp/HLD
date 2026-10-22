@@ -1,0 +1,75 @@
+🔥Offline First Investment App
+
+🔸Functional requirements
+- Display the user's portfolio and investment history.
+- Show cached portfolio data when offline.
+- Refresh data when the network becomes available.
+- Allow users to initiate an investment when online.
+- Show pending, successful, and failed transaction states.
+- Keep portfolio data synchronized with the backend.
+....................................................................................................
+
+🔥Important scenarios to handle:
+
+Scenario	                         Expected behavior
+Internet unavailable	             Keep showing cached Room data; retry sync when appropriate.
+API returns 401	                     Refresh authentication or request login; don't retry forever without valid credentials.
+API returns 500/503	                 Retry with exponential backoff.
+API returns invalid data	         Don't overwrite valid cached data.
+App process is killed	             WorkManager can continue eligible work; observe its persisted status again when the app reopens.
+User triggers sync repeatedly	     Use unique work to avoid duplicate sync jobs.
+Two sync jobs run together	         Prevent stale responses from overwriting newer data.
+Room insert fails	                 Roll back the transaction and retain the previous valid snapshot.
+Sync is cancelled	                 Don't automatically display it as a network failure.
+API succeeds but app crashes         before saving	A later sync should safely fetch and save the data again.
+offline write                        set status pending and trigger update request from worker if status pending in
+
+....................................................................................................
+
+🔥Component	                                    Responsibility
+enqueueUniqueWork(..., KEEP, ...)	            Prevent duplicate unfinished work with the same unique name
+@Transaction	                                Ensure portfolio and holdings are saved atomically
+CoroutineWorker	                                Execute sync and decide success, retry, or failure
+Room Flow	                                    Automatically update the UI when stored data changes
+StateFlow<SyncStatus>	                        Expose sync progress/status to the UI
+....................................................................................................
+
+
+
+🔸HLD ->
+
+              ┌───────────────┐
+              │      UI       │
+              └───────┬───────┘
+                      │
+                      ▼
+              ┌───────────────┐
+              │   ViewModel   │
+              └───────┬───────┘
+                      │
+                      ▼
+              ┌───────────────┐
+              │  Repository   │
+              └───────┬───────┘
+                      │
+               ┌──────┴───────┐
+               │              │
+               ▼              ▼
+         ┌──────────┐    ┌──────────┐
+         │   Room   │    │   API    │
+         │  (local) │    │ (remote) │
+         └────┬─────┘    └────┬─────┘
+              │               │
+              │               ▼
+              │          ┌──────────┐
+              │          │  Sync /  │
+              │◄─────────│ Update   │
+              │          └──────────┘
+              │
+              ▼
+         ┌───────────┐
+         │ ViewModel │
+         └─────┬─────┘
+               │
+               ▼
+              UI

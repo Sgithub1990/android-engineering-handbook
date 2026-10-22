@@ -1,0 +1,121 @@
+🔥 Chat Application 🔥
+
+🔸HLD
+
+🔸HLD:
+
+                        WebSocket -> Server
+                                  |
+UI -> ViewModel -> UseCase -> Repository
+                                  |
+                                Room(update and observe status)
+
+
+
+🔸Send/ReceiveMsg:                                                                   ACK
+UI -> ViewModel -> sendMsgUseCase -> Repository -> Room+WebSocket -> Server -------> WebSocketListener ->Repository ->Room -> ViewModel -> View
+1- User tap Send Msg Viewmodel call sendMsgUseCase
+2- sendMsgUseCase call repository
+3- Repository save Status SENDING to ROOM and Call WebSocket
+4- WebSocket Send Msg to Server
+5- Server send Ack to WebSocketListener
+6- Repository Update Room to Status SENT
+7- View Observer update
+
+
+🔸FailedMsg:
+Repository -> MessageSchedular -> retryWorker -> Socket + Room -> retry Msg -> update Status
+
+🔸Offline Write
+1-No InterNet Msg send then Update ROOM  Status PENDING
+2-Use WorkManager to sync Msg and resend
+🔹Flow:
+UI → Repository → Room (PENDING) → WorkManager → Sync Worker → Server → ACK → Room (SENT)
+
+🔸HTTP error Scenario
+1- IO Exception -> timeout,connection failed [ workManager Retry]
+2- 500 .. 599   ->  workManager Retry with back off
+3- 401          ->   Authenticator
+4- 400          ->   Bad Request (Failed)
+4- else         ->   Failed
+
+🔸Concurrency :
+
+1-🔹Send + Retry the Same Message
+Problem: Two coroutines or workers may attempt to send  or retry the same message simultaneously.
+
+Solution:
+📌Atomic SQL Update: Atomically claim a message by changing its status from PENDING to SENDING. Only the operation that successfully updates the row can proceed.
+📌Stable Unique Message ID: Reuse the same messageId for every retry of that message.
+📌Server-side Idempotency: The backend uses the messageId to identify duplicate requests and avoid processing the same message more than once.
+Remember: Atomic SQL Update + Stable Message ID + Server-side Idempotency.
+
+🔹Syntax Atomic SQL :
+@Query("
+    UPDATE messages
+    SET status = 'SENDING'
+    WHERE messageId = :messageId
+      AND status IN ('PENDING', 'PENDING_RETRY')
+")
+suspend fun claimMessage(messageId: String): Int
+
+🔹Syntax retry:
+suspend fun retryMessage(messageId: String) {
+    val affectedRows = dao.claimMessage(messageId)
+
+    if (affectedRows == 1) {
+        webSocketClient.send(messageId)
+    } else {
+        return
+    }
+}
+
+2-🔹Send + Receive at the Same Time
+Problem: The user sends a message while another message arrives from the server.
+
+Solution:
+🔹Coroutines: Run sending and receiving as independent asynchronous operations.
+🔹Unique Message ID: Prevent duplicate incoming messages.
+🔹Transactions: Use when multiple related database changes must succeed or fail together.
+🔹Room + Flow: Observe database changes and update the UI automatically.
+
+Remember: Independent Coroutines + Room + Flow + Deduplication.
+
+
+🔸Process death :
+Problem: App is killed during msg is sending
+
+Solution:
+1- Save Msg Status in Room DB before Sending
+2- Use same Mdg id with workManager for retry
+
+
+🔸ACK lost after server saves the message[response lost or some crash ]
+solution:
+1-get all sending status
+2- reuse the same msgId
+3- retry with same msgId
+
+🔸Messages arrive out of order
+Solution:
+1-use server assigned sequence number
+2-Store messages using stable IDs.
+3-Sort by the server's ordering rule
+4-if required sync missed msg from server
+
+
+
+🔸server send Duplicate Incoming Messages:
+1- make msgId unique
+2- check unique msg in database if already exist then avoid update
+2- if not then insert new
+
+
+
+
+
+
+
+
+
+

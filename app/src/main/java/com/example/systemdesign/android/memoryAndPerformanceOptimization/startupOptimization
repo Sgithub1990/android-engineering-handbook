@@ -1,0 +1,75 @@
+🔥StartUpOptimization:
+Startup optimization is the process to reducing time to take app open and become interactive
+
+🔥StartUp Type:
+
+🔸Cold Start[slowest]
+Usually the slowest because the process and app components need initialization.
+🔹Flow:
+App Open -> Linux Create Process -> Application OnCreate() -> Activity OnCreate() -> Activity Start() -> Activity Resume
+🔹Example:
+Force-stop the app and launch it again.
+
+
+🔸Warm Start[on Back press]
+Usually faster than a cold start because the process already exists.
+🔹Flow:
+App Open -> process Already Create -> Activity OnCreate()-> Activity Start() -> Activity Resume
+🔹Example:
+The user launches the app again.
+
+
+🔸Hot Start[press Home Button]
+Usually the fastest because the Activity does not need to be recreated.
+🔹Flow:
+App Open ->  Activity already Exist-> Activity ReStart() -> Activity Start()-> Activity Resume
+🔹Example:You press Home
+
+
+🔥How to Optimize StartUp
+
+🔸Lazy Initialization
+Used for Analytical event because it is used when needed
+
+🔸Coroutine for differed and background work
+Use for Reading local file ,loading non critical config
+
+🔸Work manager for differed and persistence work
+Syncing data with network constraints and retries
+
+🔥BaseProfile:
+BaseLine profile is list of important app  method that android compile during installation so app start faster and perform better
+
+🔹With Base Profile :
+Dev create base profile -> include inside APk ->  installApp -> ART observer and compile method ->App start faster
+
+🔹Without Base Profile :
+InstallApp -> ART observes frequently used methods ->JIT compiles them while app is running -> Performance gradually improves
+
+🔹 code syntax:
+
+@RunWith(AndroidJUnit4::class)
+class BaseProfileGenerator{
+@get:rule
+ val rule = BaseProfileRule()
+
+@Test
+fun generate(package: com.example.text,includeInStartUpProfile = true)
+{
+rule.collect{
+ pressHome()
+ startActivityAndWait()
+ device.waitForIdeal()
+ login()
+}
+}
+private fun MacroBenchMark.login(){
+device.findObject(By.res("emailTag").text = "shyam"
+device.findObject(By.res("password")).text = "12345"
+device.findObject(By.res("login")).click()
+device.waitForIdeal()
+}
+}
+
+** Base Line profile record every method which run inside rule.collect
+

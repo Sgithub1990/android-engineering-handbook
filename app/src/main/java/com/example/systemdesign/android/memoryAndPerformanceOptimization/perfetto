@@ -1,0 +1,29 @@
+🔥Perfetto:
+
+Perfetto is google system analytics and performance tool
+it is one of  best tool for finding performance bottleneck slowStartup, ANR and HighCPU usage
+
+🔸without perfetto
+let your app take 2.5 sec to startUp
+you only know app is slow
+
+🔸with perfetto
+it help to understand what app is doing over time
+
+1-Application.onCreate() took 400 ms.
+2-Dependency injection took 300 ms.
+3- Room database initialization took 500 ms.
+4- Main thread was blocked for 700 ms.
+5- First frame was drawn after 2.5 s.
+
+
+
+🔹Code Example:
+fun initializeSdk() {
+    Trace.beginSection("InitializeSdk")
+    try {
+        // SDK initialization work
+    } finally {
+        Trace.endSection()
+    }
+}
