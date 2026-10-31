@@ -6,7 +6,6 @@ import androidx.paging.cachedIn
 import com.example.systemdesign.design.ecommerceProduct.data.local.CartEntity
 import com.example.systemdesign.design.ecommerceProduct.data.local.EComProductEntity
 import com.example.systemdesign.design.ecommerceProduct.domain.repository.EComRepository
-import com.example.systemdesign.systemdesign.productwithDetail.domain.repository.EProductRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject

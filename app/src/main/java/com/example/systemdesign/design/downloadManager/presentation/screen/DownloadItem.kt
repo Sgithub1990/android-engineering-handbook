@@ -27,10 +27,10 @@ fun DownloadItem(
     onCancel: () -> Unit,
 ) {
 
+    val total = download.totalBytes ?: 0L
     val progress =
-        if (download.totalBytes > 0) {
-            download.downloadBytes.toFloat() /
-                    download.totalBytes.toFloat()
+        if (total > 0) {
+            download.downloadBytes.toFloat() / total.toFloat()
         } else {
             0f
         }
@@ -84,7 +84,7 @@ fun DownloadItem(
 
             // Status
             Text(
-                text = download.downLoadStatus!!.name
+                text = download.downLoadStatus?.name ?: ""
             )
 
             Spacer(
@@ -154,6 +154,7 @@ fun DownloadItem(
                     Text("Download cancelled")
                 }
 
+                else -> {}
             }
         }
     }

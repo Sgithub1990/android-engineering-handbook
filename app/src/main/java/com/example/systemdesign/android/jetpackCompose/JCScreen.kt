@@ -36,15 +36,14 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun CounterView(){
+fun CounterView() {
     var counter by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier = Modifier) {
         Text(
-          text = "$counter"
+            text = "$counter"
         )
         Button(onClick = {
             counter++
-
         }) {
             Text(
                 text = "Increase Counter"
@@ -57,136 +56,118 @@ fun CounterView(){
                 text = "Decrease Counter"
             )
         }
+    }
+}
 
+@Composable
+fun SideEffectApi() {
+    val scope = rememberCoroutineScope()
+    val viewModel = hiltViewModel<JCViewModel>()
+    var counter by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        viewModel.apiCall()
     }
 
-    @Composable
-    fun SideEffectApi(){
-        val scope = rememberCoroutineScope()
-        val viewModel = hiltViewModel<JCViewModel>()
-
-        LaunchedEffect(Unit) {
-            viewModel.apiCall()
-        }
-
-        Column {
-            Button({
-                scope.launch {
-                    viewModel.apiCall()
-                 }
-
-            }) {
-                Text("Call Api")
+    Column {
+        Button(onClick = {
+            scope.launch {
+                viewModel.apiCall()
             }
-
-        }
-
-        DisposableEffect(Unit) {
-            /*set up code */
-            onDispose {
-             /*clean up code */
-            }
-        }
-
-
-        val isEven = remember {
-            derivedStateOf {
-                counter%2==0
-            }
+        }) {
+            Text("Call Api")
         }
     }
 
-    @Composable
-   fun  DerivedStateExampleWithListScroll(){
-       val listState = rememberLazyListState()
-       val isButtonShow = remember {
-           derivedStateOf {
-               listState.firstVisibleItemIndex>0
-           }
-       }
-
-        LazyColumn{
-            items(100){
-               Text("Items$it")
-            }
-        }
-
-        if(isButtonShow.value){
-            Button({}) {
-                Text("Button")
-            }
-        }
-
-   }
-
-  @Composable
-  fun SnackBar(){
-      val snackBarHost = remember { SnackbarHostState() }
-      LaunchedEffect(Unit) {
-          snackBarHost.showSnackbar("message","Ok",)
-      }
-
-  }
-
-
-
-
-
-    /* Composition local example */
-    val user = compositionLocalOf<String> { "" }
-    @Composable
-    fun Profile(){
-    }
-    @Composable
-    fun Setting(){
-        val name = user.current
-    }
-    @Composable
-    fun Home(){
-        Profile()
-        Setting()
-    }
-    @Composable
-    fun CompositionLocalUse(){
-        CompositionLocalProvider(user provides String()) {
-            Home()
+    DisposableEffect(Unit) {
+        /* set up code */
+        onDispose {
+            /* clean up code */
         }
     }
 
+    val isEven by remember {
+        derivedStateOf {
+            counter % 2 == 0
+        }
+    }
+}
 
-
-
-
-    /**
-    collectAsState -> convert kotlin flow to compose state
-    snapSotFlow -> convert compose state to kotlin flow
-    */
-    @Composable
-    fun SnapSotFlowExample(){
-        val counter = remember { mutableStateOf(0) }
-        LaunchedEffect(Unit) {
-            snapshotFlow { counter }.collect {
-
-            }
+@Composable
+fun DerivedStateExampleWithListScroll() {
+    val listState = rememberLazyListState()
+    val isButtonShow = remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0
         }
     }
 
-
-    /*stable key Example*/
-
-    @Composable
-    fun StableKey(){
-        val students= mutableListOf<StudentEntity>()
-        LazyColumn {
-            items(items = students, key = {student -> student.id }){
-            /*row item*/
-            }
+    LazyColumn(state = listState) {
+        items(100) {
+            Text("Items $it")
         }
     }
 
+    if (isButtonShow.value) {
+        Button(onClick = {}) {
+            Text("Button")
+        }
+    }
+}
 
+@Composable
+fun SnackBar() {
+    val snackBarHost = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        snackBarHost.showSnackbar("message", "Ok")
+    }
+}
 
+/* Composition local example */
+val LocalUser = compositionLocalOf<String> { "" }
 
+@Composable
+fun Profile() {
+}
 
+@Composable
+fun Setting() {
+    val name = LocalUser.current
+}
 
+@Composable
+fun Home() {
+    Profile()
+    Setting()
+}
+
+@Composable
+fun CompositionLocalUse() {
+    CompositionLocalProvider(LocalUser provides String()) {
+        Home()
+    }
+}
+
+/**
+collectAsState -> convert kotlin flow to compose state
+snapSotFlow -> convert compose state to kotlin flow
+*/
+@Composable
+fun SnapSotFlowExample() {
+    val counter = remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { counter.value }.collect {
+        }
+    }
+}
+
+/* stable key Example */
+@Composable
+fun StableKey() {
+    val students = remember { mutableListOf<StudentEntity>() }
+    LazyColumn {
+        items(items = students, key = { student -> student.id }) {
+            Text(text = "Student")
+        }
+    }
 }

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.systemdesign.design.offlineFirstStructure.data.local.UserDao
 import com.example.systemdesign.design.offlineFirstStructure.data.local.UserDb
-import com.example.systemdesign.misllenious.DbMigration
+import com.example.systemdesign.android.room.DbMigration
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

@@ -1,6 +1,6 @@
 package com.example.systemdesign.design.chatApplication.domain.socket
 
-import com.example.systemdesign.systemdesign.chatApplication.data.local.MessageEntity
+import com.example.systemdesign.design.chatApplication.data.local.MessageEntity
 
 sealed interface SocketEvent {
 
